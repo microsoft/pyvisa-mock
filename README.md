@@ -1,14 +1,63 @@
+# pyvisa_mock
 
-# Contributing
+pyvisa-mock aims to provide similar functionality as [pyvisa-sim](https://pyvisa-sim.readthedocs.io/en/latest/), however, instead of a static YAML file providing query/response items, a dynamic python object is responsible for handling queries. 
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+## Example
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+```python
+from collections import defaultdict
+from visa import ResourceManager
+from visa_mock.base.base_mocker import BaseMocker, scpi
+from visa_mock.base.register import register_resource
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+class MockerChannel(BaseMocker): 
+    """
+    A mocker channel for a multi channel voltage source. 
+    Voltages are zero by default
+    """
+    
+    def __init__(self, call_delay: float = 0.0):
+        super().__init__(call_delay=call_delay)
+        self._voltage = 0
+    
+    # Lets define handler functions. Notice how we can be 
+    # lazy in our regular expressions (using ".*"). The 
+    # typehints will be used to cast strings to the 
+    # required types
+    
+    @scpi(r":VOLT (.*)") 
+    def _set_voltage(self, value: float) -> None:
+        self._voltage = value
+    
+    @scpi(r":VOLT\?")
+    def _get_voltage(self) -> float: 
+        return self._voltage
+
+
+class Mocker(BaseMocker):
+    """
+    The main mocker class. 
+    """
+
+    def __init__(self, call_delay: float = 0.0):
+        super().__init__(call_delay=call_delay)
+        self._channels = defaultdict(MockerChannel)
+
+    @scpi("\*IDN\?")
+    def idn(self) -> str: 
+        """
+        'vendor', 'model', 'serial', 'firmware'
+        """
+        return "Mocker,testing,00000,0.01"
+    
+    @scpi(r":INSTR:CHANNEL(.*)")
+    def _get_channel(self, channel: int) -> MockerChannel:
+        return self._channels[channel] 
+        
+register_resource("MOCK0::mock1::INSTR", Mocker())
+
+rc = ResourceManager(visa_library="@mock")
+res = rc.open_resource("MOCK0::mock1::INSTR")
+res.write(":INSTR:CHANNEL1:VOLT 2.3")
+reply = res.query(":INSTR:CHANNEL1:VOLT?")  # This should return '2.3'
+```
