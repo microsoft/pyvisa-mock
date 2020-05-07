@@ -1,4 +1,4 @@
-# pyvisa_mock
+# pyvisa-mock
 
 pyvisa-mock aims to provide similar functionality as [pyvisa-sim](https://pyvisa-sim.readthedocs.io/en/latest/), however, instead of a static YAML file providing query/response items, a dynamic python object is responsible for handling queries. 
 
