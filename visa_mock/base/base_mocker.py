@@ -199,7 +199,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.match(reformat(regex_pattern), scpi_string, re.IGNORECASE)
+            search_result = re.match(regex_pattern, scpi_string, re.IGNORECASE)
             if search_result:
                 if not found:
                     found = True
