@@ -165,7 +165,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         if scpi_string is None:
             self._call_delay = call_delay
         else:
-            self.__scpi_dict__[reformat(scpi_string)].call_delay = call_delay
+            self.__scpi_dict__[compile_regular_expression(scpi_string)].call_delay = call_delay
 
     @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
@@ -174,7 +174,7 @@ class BaseMocker(metaclass=MockerMetaClass):
             return_type = handler.return_type
 
             if not isinstance(return_type, MockerMetaClass):
-                __tmp_scpi_dict__[reformat(scpi_string)] = handler
+                __tmp_scpi_dict__[compile_regular_expression(scpi_string)] = handler
                 return
 
             # The function being decorated itself returns a Mocker. This is very
@@ -225,5 +225,20 @@ class BaseMocker(metaclass=MockerMetaClass):
 scpi = BaseMocker.scpi
 
 
-def reformat(scpi_string_pattern: str) -> str:
+def compile_regular_expression(scpi_string_pattern: str) -> str:
+    """
+    This function puts "(?:" and ")?" around any group of lower-case letters, if it follows any
+    upper-case letter(s).
+
+    For example:
+        "Tage" -> "T(?:age)?"
+        "VOLTage:CHAnnel[1-9] (.*)" -> "VOLT(?:age)?:CHA(?:nnel)?[1-9]"
+
+    Explanation of the regular expression:
+    (?P<chr>[A-Z]): one upper case alphabet letter, referred as "chr" group;
+    (?P<name>[a-z]+): one or more lower case alphabet letters, referred as "name" group;
+    \g<chr>: referring to the previously defined "chr" group;
+    \g<name>: referring to the previously defined "name" group.
+
+    """
     return re.sub("(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?", scpi_string_pattern)
