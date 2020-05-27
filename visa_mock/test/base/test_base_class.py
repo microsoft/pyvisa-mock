@@ -8,8 +8,6 @@ def test_base_long_and_short_form_match():
     They are also NOT case-sensitive. Same for the keyword "VOLTage".
 
     The user can use either the long form or the short form, but not partial.
-
-    The user should also use only the long form or the short form, but not mixed of the two.
     """
     mocker = Mocker0()
     mocker.send(":instr:channel1:volt 12")

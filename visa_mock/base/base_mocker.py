@@ -199,10 +199,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.match(f'(?i){regex_pattern}', scpi_string)
-            if not search_result:
-                regex_pattern_short = shoten_scpi_patten(regex_pattern)
-                search_result = re.match(f'(?i){regex_pattern_short}', scpi_string)
+            search_result = re.match(make(regex_pattern), scpi_string, re.IGNORECASE)
             if search_result:
                 if not found:
                     found = True
@@ -228,12 +225,5 @@ class BaseMocker(metaclass=MockerMetaClass):
 scpi = BaseMocker.scpi
 
 
-def shoten_scpi_patten(scpi_patten):
-    verses = scpi_patten.split(':')
-    for i in range(len(verses)):
-        verse = verses[i]
-        if verse and verse[0].isupper():
-            search_result = re.search('[a-z]', verse)
-            if search_result:
-                verses[i] = re.sub('[a-z]', '', verse)
-    return ':'.join(verses)
+def make(scpi_string_pattern: str) -> str:
+    return re.sub("(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?", scpi_string_pattern)
