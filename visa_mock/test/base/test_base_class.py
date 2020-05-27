@@ -13,7 +13,7 @@ def test_base_long_and_short_form_match():
     mocker.send(":instr:channel1:volt 12")
     mocker.send(":Instrument:channel2:voltage 13.4")
 
-    voltage = mocker.send(":inStrument:channel1:vOlTage?")
+    voltage = mocker.send(":inStrument:channel1:vOlT?")
     assert voltage == "12.0"
 
     voltage = mocker.send(":iNstR:channel2:volt?")
