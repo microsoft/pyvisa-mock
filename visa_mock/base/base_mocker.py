@@ -165,7 +165,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         if scpi_string is None:
             self._call_delay = call_delay
         else:
-            self.__scpi_dict__[scpi_string].call_delay = call_delay
+            self.__scpi_dict__[reformat(scpi_string)].call_delay = call_delay
 
     @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
@@ -174,7 +174,7 @@ class BaseMocker(metaclass=MockerMetaClass):
             return_type = handler.return_type
 
             if not isinstance(return_type, MockerMetaClass):
-                __tmp_scpi_dict__[scpi_string] = handler
+                __tmp_scpi_dict__[reformat(scpi_string)] = handler
                 return
 
             # The function being decorated itself returns a Mocker. This is very
@@ -199,7 +199,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.match(make(regex_pattern), scpi_string, re.IGNORECASE)
+            search_result = re.match(reformat(regex_pattern), scpi_string, re.IGNORECASE)
             if search_result:
                 if not found:
                     found = True
@@ -225,5 +225,5 @@ class BaseMocker(metaclass=MockerMetaClass):
 scpi = BaseMocker.scpi
 
 
-def make(scpi_string_pattern: str) -> str:
+def reformat(scpi_string_pattern: str) -> str:
     return re.sub("(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?", scpi_string_pattern)
