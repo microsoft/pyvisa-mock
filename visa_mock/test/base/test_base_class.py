@@ -1,4 +1,19 @@
-from visa_mock.test.mock_instruments.instruments import Mocker1, Mocker2, Mocker3, Mocker4
+from visa_mock.test.mock_instruments.instruments import Mocker0, Mocker1, Mocker2, Mocker3, Mocker4
+
+
+def test_base_partial_match():
+    """
+    In Mocker0, "INSTRument" is used, but only the "INSTR" part is required. It's also NOT case-sensitive.
+    """
+    mocker = Mocker0()
+    mocker.send(":instr:channel1:volt 12")
+    mocker.send(":instr:channel2:volt 13.4")
+
+    voltage = mocker.send(":instr:channel1:volt?")
+    assert voltage == "12.0"
+
+    voltage = mocker.send(":instr:channel2:volt?")
+    assert voltage == "13.4"
 
 
 def test_base():

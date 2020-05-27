@@ -2,6 +2,28 @@ from collections import defaultdict
 from visa_mock.base.base_mocker import BaseMocker, scpi
 
 
+class Mocker0(BaseMocker):
+    """
+    A mocker class mocking a multi channel voltage source.
+    Voltages are zero by default
+
+    The upper case part in the scpi cmd is mandatory, while the
+    lower case potion is optional.
+    """
+
+    def __init__(self, call_delay: float = 0.0) -> None:
+        super().__init__(call_delay=call_delay)
+        self._voltage = defaultdict(lambda: 0.0)
+
+    @scpi(r":INSTRument:CHANNEL(.*):VOLT (.*)")
+    def _set_voltage(self, channel: int, value: float) -> None:
+        self._voltage[channel] = value
+
+    @scpi(r":INSTRument:CHANNEL(.*):VOLT\?")
+    def _get_voltage(self, channel: int) -> float:
+        return self._voltage[channel]
+
+
 class Mocker1(BaseMocker):
     """
     A mocker class mocking a multi channel voltage source.
