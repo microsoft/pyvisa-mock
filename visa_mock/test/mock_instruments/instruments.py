@@ -15,11 +15,11 @@ class Mocker0(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = defaultdict(lambda: 0.0)
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLT (.*)")
+    @scpi(r":INSTRument:CHANNEL(.*):VOLTage (.*)")
     def _set_voltage(self, channel: int, value: float) -> None:
         self._voltage[channel] = value
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLT\?")
+    @scpi(r":INSTRument:CHANNEL(.*):VOLTage\?")
     def _get_voltage(self, channel: int) -> float:
         return self._voltage[channel]
 

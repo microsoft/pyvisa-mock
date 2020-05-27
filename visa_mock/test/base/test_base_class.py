@@ -5,15 +5,17 @@ from visa_mock.test.mock_instruments.instruments import Mocker0, Mocker1, Mocker
 def test_base_long_and_short_form_match():
     """
     In Mocker0, "INSTRument" is the long form, and "INSTR" is the short form.
-    They are also NOT case-sensitive.
+    They are also NOT case-sensitive. Same for the keyword "VOLTage".
 
     The user can use either the long form or the short form, but not partial.
+
+    The user should also use only the long form or the short form, but not mixed of the two.
     """
     mocker = Mocker0()
     mocker.send(":instr:channel1:volt 12")
-    mocker.send(":Instr:channel2:volt 13.4")
+    mocker.send(":Instrument:channel2:voltage 13.4")
 
-    voltage = mocker.send(":inStr:channel1:volt?")
+    voltage = mocker.send(":inStrument:channel1:vOlTage?")
     assert voltage == "12.0"
 
     voltage = mocker.send(":iNstR:channel2:volt?")

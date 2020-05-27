@@ -199,17 +199,14 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            replacements = {}
             search_result = re.match(f'(?i){regex_pattern}', scpi_string)
             if not search_result:
-                regex_pattern_short, replacements = shoten_scpi_patten(regex_pattern)
+                regex_pattern_short = shoten_scpi_patten(regex_pattern)
                 search_result = re.match(f'(?i){regex_pattern_short}', scpi_string)
             if search_result:
                 if not found:
                     found = True
                     handler = self.__scpi_dict__[regex_pattern]
-                    scpi_string_modified = reformat_scpi_string(scpi_string, replacements)
-                    search_result = re.match(f'(?i){regex_pattern}', scpi_string_modified)
                     args = search_result.groups()
                 else:
                     raise MockingError(
@@ -232,23 +229,11 @@ scpi = BaseMocker.scpi
 
 
 def shoten_scpi_patten(scpi_patten):
-    replacements = {}
     verses = scpi_patten.split(':')
     for i in range(len(verses)):
         verse = verses[i]
-        if verse.isalpha() and verse[0].isupper():
+        if verse and verse[0].isupper():
             search_result = re.search('[a-z]', verse)
             if search_result:
-                replacements[i] = verse
                 verses[i] = re.sub('[a-z]', '', verse)
-    return ':'.join(verses), replacements
-
-
-def reformat_scpi_string(scpi_string, replacements):
-    if len(replacements) == 0:
-        return scpi_string
-    verses = scpi_string.split(':')
-    for i in range(len(verses)):
-        if i in replacements:
-            verses[i] = replacements[i]
     return ':'.join(verses)
