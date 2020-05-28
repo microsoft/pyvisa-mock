@@ -165,7 +165,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         if scpi_string is None:
             self._call_delay = call_delay
         else:
-            self.__scpi_dict__[scpi_string].call_delay = call_delay
+            self.__scpi_dict__[compile_regular_expression(scpi_string)].call_delay = call_delay
 
     @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
@@ -174,7 +174,7 @@ class BaseMocker(metaclass=MockerMetaClass):
             return_type = handler.return_type
 
             if not isinstance(return_type, MockerMetaClass):
-                __tmp_scpi_dict__[scpi_string] = handler
+                __tmp_scpi_dict__[compile_regular_expression(scpi_string)] = handler
                 return
 
             # The function being decorated itself returns a Mocker. This is very
@@ -199,7 +199,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.search(regex_pattern, scpi_string)
+            search_result = re.match(regex_pattern, scpi_string, re.IGNORECASE)
             if search_result:
                 if not found:
                     found = True
@@ -223,3 +223,49 @@ class BaseMocker(metaclass=MockerMetaClass):
 
 
 scpi = BaseMocker.scpi
+
+
+def compile_regular_expression(scpi_string: str) -> str:
+    """
+    This function creates a regular expression pattern given a
+    SCPI string. This regular expression follows the SCPI
+    language rule where upper case letters denote the short form
+    of a SCPI command. A SCPI message send by software to the
+    instrument must match either the long or the short form.
+
+    Examples:
+        >>> scpi_pattern = "VOLTage:CHANnel(.*) (.*)"  # From an instrument manual
+        >>> # the upper case part denotes the command short form
+        >>> regex = compile_regular_expression(scpi_pattern)
+        >>> # Sanity check to see if we match the long form:
+        >>> assert re.match(regex, "voltage:channel1 2.3").groups() == ('1', '2.3')
+        >>> # Check if we match the shortform:
+        >>> assert re.match(regex, "volt:chan1 2.3").groups() == ('1', '2.3')
+        >>> # We should be able to mix and match:
+        >>> assert re.match(regex, "voltage:chan1 2.3").groups() == ('1', '2.3')
+
+    Args:
+        scpi_string: A string representing a pattern with which SCPI commands send by
+            software should match. These patterns can often be found in instrument
+            manuals.
+
+    Returns:
+        A regex pattern which will match long and short forms.
+
+    Notes:
+        This function works by finding all groups of lower case letters which are
+        preceded by any upper case letter. These groups of lower case letters are
+        marked as optional in the regex. Furthermore, this group is marked as
+        non-capturing. Please see
+
+        https://docs.python.org/3/howto/regex.html#non-capturing-and-named-groups
+
+        Section "Non-capturing and Named Groups"
+    """
+
+    regex = re.sub(
+        "(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?",
+        scpi_string
+    )
+
+    return regex
