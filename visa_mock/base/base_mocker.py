@@ -225,20 +225,47 @@ class BaseMocker(metaclass=MockerMetaClass):
 scpi = BaseMocker.scpi
 
 
-def compile_regular_expression(scpi_string_pattern: str) -> str:
+def compile_regular_expression(scpi_string: str) -> str:
     """
-    This function puts "(?:" and ")?" around any group of lower-case letters, if it follows any
-    upper-case letter(s).
+    This function creates a regular expression pattern given a
+    SCPI string. This regular expression follows the SCPI
+    language rule where upper case letters denote the short form
+    of a SCPI command. A SCPI message send by software to the
+    instrument must match either the long or the short form.
 
-    For example:
-        "Tage" -> "T(?:age)?"
-        "VOLTage:CHAnnel[1-9] (.*)" -> "VOLT(?:age)?:CHA(?:nnel)?[1-9]"
+    Examples:
+        >>> scpi_pattern = "VOLTage:CHANnel(.*) (.*)"  # From an instrument manual
+        >>> # the upper case part denotes the command short form
+        >>> regex = compile_regular_expression(scpi_pattern)
+        >>> # Sanity check to see if we match the long form:
+        >>> assert re.match(regex, "voltage:channel1 2.3").groups() == ('1', '2.3')
+        >>> # Check if we match the shortform:
+        >>> assert re.match(regex, "volt:chan1 2.3").groups() == ('1', '2.3')
+        >>> # We should be able to mix and match:
+        >>> assert re.match(regex, "voltage:chan1 2.3").groups() == ('1', '2.3')
 
-    Explanation of the regular expression:
-    (?P<chr>[A-Z]): one upper case alphabet letter, referred as "chr" group;
-    (?P<name>[a-z]+): one or more lower case alphabet letters, referred as "name" group;
-    \g<chr>: referring to the previously defined "chr" group;
-    \g<name>: referring to the previously defined "name" group.
+    Args:
+        scpi_string: A string representing a pattern with which SCPI commands send by
+            software should match. These patterns can often be found in instrument
+            manuals.
 
+    Returns:
+        A regex pattern which will match long and short forms.
+
+    Notes:
+        This function works by finding all groups of lower case letters which are
+        preceded by any upper case letter. These groups of lower case letters are
+        marked as optional in the regex. Furthermore, this group is marked as
+        non-capturing. Please see
+
+        https://docs.python.org/3/howto/regex.html#non-capturing-and-named-groups
+
+        Section "Non-capturing and Named Groups"
     """
-    return re.sub("(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?", scpi_string_pattern)
+
+    regex = re.sub(
+        "(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?",
+        scpi_string
+    )
+
+    return regex
