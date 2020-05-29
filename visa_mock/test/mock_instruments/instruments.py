@@ -68,11 +68,11 @@ class MockerChannel(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = 0
 
-    @scpi(r":VOLT (.*)")
+    @scpi(r":VOLTage (.*)")
     def _set_voltage(self, voltage: float) -> None:
         self._voltage = voltage
 
-    @scpi(r":VOLT\?")
+    @scpi(r":VOLTage\?")
     def _get_voltage(self) -> float:
         return self._voltage
 
@@ -100,7 +100,7 @@ class Mocker4(BaseMocker):
             2: Mocker3()
         }
 
-    @scpi(r":INSTR(.*)")
+    @scpi(r":INSTRument(.*)")
     def _channel(self, number: int) -> Mocker3:
         return self._instruments[number]
 
