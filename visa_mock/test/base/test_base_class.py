@@ -63,18 +63,30 @@ def test_one_of_each_kind():
 
 
 def test_modular_mock():
+    """
+    Note: In the definition of the MockerChannel, which was called in Mocker3, keyword "VOLTage"
+    was used. It means the user can use either the long form "voltage", or the short form "volt"
+    in the scpi string. (both are case in-sensitive)
+    """
 
     mocker3 = Mocker3()
-    mocker3.send(":CHANNEL1:VOLT 12")
+    # to use long form "voltage":
+    mocker3.send(":CHANNEL1:VOLTage 12")
+    # short form "volt":
     voltage = mocker3.send(":CHANNEL1:VOLT?")
     assert voltage == "12.0"
 
-    mocker3.send(":CHANNEL2:VOLT 13.4")
-    voltage = mocker3.send(":CHANNEL2:VOLT?")
+    mocker3.send(":channel2:volt 13.4")
+    voltage = mocker3.send(":channel2:voltage?")
     assert voltage == "13.4"
 
 
 def test_modular_2_mock():
+    """
+    Note: In the definition of Mocker4, keyword "INSTRument" was used. As a result, the user can use
+    either the long form "instrument" or the short form "instr", in addition to the "voltage"/"volt"
+    situation described in the test_modular_mock() above.
+    """
 
     mocker4 = Mocker4()
 
@@ -84,13 +96,16 @@ def test_modular_2_mock():
     voltage = mocker4.send(":INSTR1:CHANNEL1:VOLT?")
     assert voltage == "12.0"
 
-    voltage = mocker4.send(":INSTR1:CHANNEL2:VOLT?")
+    # to use long form "instrument" and "voltage", case in-sensitive:
+    voltage = mocker4.send(":INSTRument1:CHANNEL2:VOLTage?")
     assert voltage == "0"
     mocker4.send(":INSTR1:CHANNEL2:VOLT 13.4")
-    voltage = mocker4.send(":INSTR1:CHANNEL2:VOLT?")
+    # to use long form "voltage" only
+    voltage = mocker4.send(":INSTR1:CHANNEL2:VOLTage?")
     assert voltage == "13.4"
 
-    voltage = mocker4.send(":INSTR2:CHANNEL1:VOLT?")
+    # to use long form "instrument" only:
+    voltage = mocker4.send(":instrument2:CHANNEL1:VOLT?")
     assert voltage == "0"
     mocker4.send(":INSTR2:CHANNEL1:VOLT -12")
     voltage = mocker4.send(":INSTR2:CHANNEL1:VOLT?")

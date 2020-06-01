@@ -173,8 +173,10 @@ class BaseMocker(metaclass=MockerMetaClass):
             handler = SCPIHandler.from_method(function)
             return_type = handler.return_type
 
+            regex = compile_regular_expression(scpi_string)
+
             if not isinstance(return_type, MockerMetaClass):
-                __tmp_scpi_dict__[compile_regular_expression(scpi_string)] = handler
+                __tmp_scpi_dict__[regex] = handler
                 return
 
             # The function being decorated itself returns a Mocker. This is very
@@ -185,8 +187,8 @@ class BaseMocker(metaclass=MockerMetaClass):
 
             SubModule = cast(MockerMetaClass, return_type)
 
-            for scpi_sub_string, sub_handler in SubModule.__scpi_dict__.items():
-                __tmp_scpi_dict__[scpi_string + scpi_sub_string] = SCPIHandler.combine(
+            for regex_sub_string, sub_handler in SubModule.__scpi_dict__.items():
+                __tmp_scpi_dict__[regex + regex_sub_string] = SCPIHandler.combine(
                     handler, sub_handler
                 )
 
