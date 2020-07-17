@@ -53,7 +53,10 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
 
     def new_session(self, session: Session = None) -> int:
 
-        new_session_idx = len(self._sessions) + 1
+        if self._sessions:
+            new_session_idx = max(self._sessions) + 1
+        else:
+            new_session_idx = 1
 
         if session is None:
             session = Session(new_session_idx, "MOCK0::name::INSTR")
