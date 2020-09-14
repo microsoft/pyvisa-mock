@@ -1,7 +1,20 @@
 from inspect import signature
-from typing import Dict, List, Callable, Any, cast, get_type_hints, Optional
+from typing import (
+    Dict, List, Callable,
+    Any, cast, get_type_hints,
+    Optional,
+    )
+from dataclasses import dataclass
 import re
 import time
+from queue import Queue
+
+from pyvisa import constants
+
+
+@dataclass
+class StbRegister():
+    value: int = 0
 
 
 class MockingError(Exception):
@@ -144,9 +157,15 @@ class MockerMetaClass(type):
 
 class BaseMocker(metaclass=MockerMetaClass):
     __scpi_dict__: Dict[str, Callable] = {}
+    _events: Dict[constants.EventType, Queue]
+    # Should be created and set by session
+    _remote_stb: Optional[StbRegister]
 
     def __init__(self, call_delay: float = 0.0):
         self._call_delay = call_delay
+        # will be updated with supported events when iregistered with session
+        self._events: Dict[constants.EventType, Queue] = {}
+        self._remote_stb = None
 
     def set_call_delay(
             self,
@@ -223,6 +242,43 @@ class BaseMocker(metaclass=MockerMetaClass):
 
         return str(handler(self, *args))
 
+    def set_events(self, events: Dict[constants.EventType, Queue]):
+        self._events = events
+
+    def get_events(self):
+        return self._events
+
+    events = property(
+        fget=get_events,
+        fset=set_events,
+        doc="Events dictionary holds event queues.")
+
+    def set_service_request_event(self):
+        try:
+            cur_event = self.events[constants.EventType.service_request]
+        except KeyError as e:
+            raise MockingError(
+                'Device does not support service request events or session not started.') from e
+        cur_event.put(None)
+
+    def set_stb(self, stb: int) -> None:
+        if self._remote_stb is None:
+            raise MockingError(
+                'Remote session STB setter not set.  Session does not support'
+                ' stb or session not started.')
+        self._remote_stb.value = stb
+
+    def get_stb(self) -> int:
+        if self._remote_stb is None:
+            raise MockingError(
+                'Remote session STB setter not set.  Session does not support'
+                ' stb or session not started.')
+        return self._remote_stb.value
+
+    stb = property(
+        fget=get_stb,
+        fset=set_stb,
+        doc="stb register")
 
 scpi = BaseMocker.scpi
 

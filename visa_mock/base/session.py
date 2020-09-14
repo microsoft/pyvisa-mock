@@ -3,17 +3,48 @@ Large parts of this code has been copied directly from pyvisa-sim
 
 https://github.com/pyvisa/pyvisa-sim
 """
-from typing import Optional
-from pyvisa import constants, attributes, rname
+from typing import Optional, Dict
 import logging
+from queue import Queue, Empty
+from threading import RLock
+from datetime import timedelta
 
-from visa_mock.base.base_mocker import BaseMocker
+from pyvisa import constants, attributes, rname
+from visa_mock.base.base_mocker import BaseMocker, StbRegister
 
 
 logger = logging.getLogger()
 
 
+class SessionError(Exception):
+    pass
+
+
+class EventNotEnabledError(SessionError):
+    pass
+
+
+class EventNotDisabledError(SessionError):
+    pass
+
+
+class EventTimeoutError(SessionError):
+    pass
+
+
+class EventNotSupportedError(SessionError):
+    pass
+
+
 class Session:
+    _events: Dict[constants.EventType, Queue]
+    _events_enabled: Dict[constants.EventType, bool]
+    # Serialized access to the dictionary not the events
+    _events_dict_lock: RLock
+    _SUPPORTED_EVENTS = [
+        constants.EventType.service_request,
+        ]
+    _stb: StbRegister
 
     def __init__(
             self,
@@ -38,6 +69,24 @@ class Session:
         self.session_index = resource_manager_session
         self._device: Optional[BaseMocker] = None
         self._read_buffer = ""
+        self._events: Dict[constants.EventType, Queue] = {
+            i: Queue()
+            for i in self._SUPPORTED_EVENTS
+            }
+        self._events_enabled: Dict[constants.EventType, bool] = {
+            constants.EventType.service_request: False
+            for i in self._SUPPORTED_EVENTS
+            }
+        self._events_dict_lock = RLock()
+        self._stb: StbRegister = StbRegister()
+
+    @property
+    def stb(self) -> int:
+        return self._stb
+
+    @stb.setter
+    def stb(self, stb: int):
+        self._stb = stb
 
     @property
     def device(self) -> BaseMocker:
@@ -46,6 +95,8 @@ class Session:
     @device.setter
     def device(self, dev: BaseMocker) -> None:
         self._device = dev
+        self._device.events = dict(self._events)
+        self._device._remote_stb = self._stb
 
     def get_attribute(self, attribute):  # TODO: type hints
         """
@@ -104,3 +155,65 @@ class Session:
     def ask(self, message: str):
         self.write(message)
         return self.read()
+
+    """
+    Event Logic:
+
+    The following event methods enable sessions to support device events.
+
+    Only queue type visa events are supported.  The event queues are stored in
+    a dictionary.  Because of the reentrent/asyncronous nature of events, the
+    dictionary access needs to be serialized.  The queues themselves already
+    support threaded access.
+
+    """
+    def _clear_event_queue(self, event_type: constants.EventType) -> None:
+        cur_event = self._events[event_type]
+        with cur_event.mutex:
+            cur_event.queue.clear()
+
+    def enable_event(self, event_type: constants.EventType) -> None:
+        if event_type not in self._SUPPORTED_EVENTS:
+            raise EventNotSupportedError()
+        with self._events_dict_lock:
+            if not self._events_enabled[event_type]:
+                self._clear_event_queue(event_type)
+                self._events_enabled[event_type] = True
+            else:
+                raise EventNotDisabledError()
+
+    def disable_event(self, event_type: constants.EventType) -> None:
+        if event_type not in self._SUPPORTED_EVENTS:
+            raise EventNotSupportedError()
+        with self._events_dict_lock:
+            if self._events_enabled[event_type]:
+                self._events_enabled = False
+            else:
+                raise EventNotEnabledError('Event not enabled.')
+
+    def discard_events(self, event_type: constants.EventType) -> None:
+        if event_type not in self._SUPPORTED_EVENTS:
+            raise EventNotSupportedError()
+        with self._events_dict_lock:
+            if not self._events_enabled:
+                raise EventNotEnabledError('Event not enabled.')
+            self._clear_event_queue(event_type)
+
+    def set_event(self, event_type: constants.EventType) -> None:
+        if event_type not in self._SUPPORTED_EVENTS:
+            raise EventNotSupportedError()
+        cur_event = self._events[event_type]
+        if not self._events_enabled:
+            raise EventNotEnabledError('Event not enabled.')
+        cur_event.put(None)
+
+    def wait_for_event(self, event_type: constants.EventType, timeout: timedelta) -> None:
+        if event_type not in self._SUPPORTED_EVENTS:
+            raise EventNotSupportedError()
+        cur_event = self._events[event_type]
+        if not self._events_enabled:
+            raise EventNotEnabledError('Event not enabled.')
+        try:
+            cur_event.get(timeout=timeout.total_seconds())
+        except Empty as e:
+            raise EventTimeoutError() from e
