@@ -14,6 +14,10 @@ from pyvisa import constants
 
 @dataclass
 class StbRegister():
+    """
+    This class is used to allow the mocker and session to both refrence one
+    register instance.
+    """
     value: int = 0
 
 
@@ -159,13 +163,13 @@ class BaseMocker(metaclass=MockerMetaClass):
     __scpi_dict__: Dict[str, Callable] = {}
     _events: Dict[constants.EventType, Queue]
     # Should be created and set by session
-    _remote_stb: Optional[StbRegister]
+    _stb_register: Optional[StbRegister]
 
     def __init__(self, call_delay: float = 0.0):
         self._call_delay = call_delay
         # will be updated with supported events when iregistered with session
         self._events: Dict[constants.EventType, Queue] = {}
-        self._remote_stb = None
+        self._stb_register: Optional[StbRegister] = None
 
     def set_call_delay(
             self,
@@ -242,10 +246,27 @@ class BaseMocker(metaclass=MockerMetaClass):
 
         return str(handler(self, *args))
 
+    """
+    Event Support:
+
+    The following methods enable event/inturrupt support.  Events are
+    implemented with queues.  For each event type (consts.EventType) that is
+    supported there is a corresponding queue.  These are stored in a
+    dictionary.
+
+    The session holds the state information about the device including events.
+    When the mocker is registered with the session, the session sets the
+    events dictionary in the mocker.
+    """
+
     def set_events(self, events: Dict[constants.EventType, Queue]):
+        """
+        The event dict should be set by the session when the mocker is
+        registered with the session.
+        """
         self._events = events
 
-    def get_events(self):
+    def get_events(self) -> Dict[constants.EventType, Queue]:
         return self._events
 
     events = property(
@@ -254,6 +275,9 @@ class BaseMocker(metaclass=MockerMetaClass):
         doc="Events dictionary holds event queues.")
 
     def set_service_request_event(self):
+        """
+        Create an service request event.
+        """
         try:
             cur_event = self.events[constants.EventType.service_request]
         except KeyError as e:
@@ -261,24 +285,45 @@ class BaseMocker(metaclass=MockerMetaClass):
                 'Device does not support service request events or session not started.') from e
         cur_event.put(None)
 
+    """
+    Status Byte Support:
+
+    The following methods enable status byte support.  The status byte
+    register object is created and held on by the session.  This allows
+    the visa library mocker to access this register.
+
+    The session holds the state information about the device including the
+    status byte.  When the mocker is registered with the session, the session
+    sets the status byte reference in the mocker.
+
+    """
     def set_stb(self, stb: int) -> None:
-        if self._remote_stb is None:
+        if self._stb_register is None:
             raise MockingError(
                 'Remote session STB setter not set.  Session does not support'
                 ' stb or session not started.')
-        self._remote_stb.value = stb
+        self._stb_register.value = stb
 
     def get_stb(self) -> int:
-        if self._remote_stb is None:
+        if self._stb_register is None:
             raise MockingError(
                 'Remote session STB setter not set.  Session does not support'
                 ' stb or session not started.')
-        return self._remote_stb.value
+        return self._stb_register.value
 
     stb = property(
         fget=get_stb,
         fset=set_stb,
         doc="stb register")
+
+    def _set_stb_register(self, stb_register: StbRegister):
+        self._stb_register = stb_register
+
+    stb_register = property(
+        fget=None,
+        fset=_set_stb_register,
+        doc="Stb register.")
+
 
 scpi = BaseMocker.scpi
 

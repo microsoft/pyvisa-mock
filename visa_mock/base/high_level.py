@@ -31,9 +31,6 @@ InterfaceType.mock = mock_constant
 @Resource.register(mock_constant, "INSTR")
 class MockResource(Resource):
 
-    def __init__(self, *vargs, **kwargs):
-        super().__init__(*vargs, **kwargs)
-
     def read(self, **kwargs) -> str:
         reply, status_code = self.visalib.read(self.session)
         return reply
@@ -68,6 +65,7 @@ class MockResource(Resource):
             Maximum waiting time in milliseconds. Defaul: 25000 (milliseconds).
             None means waiting forever if necessary.
 
+        (NOTE: This method is copied from the pyvisa library)
         """
         self.enable_event(
             constants.EventType.service_request, constants.EventMechanism.queue
@@ -96,18 +94,11 @@ class MockResource(Resource):
             constants.EventType.service_request, constants.EventMechanism.queue
         )
 
-    def set_event(self, event_type):
-        """
-        Special method not found in the normal pyvisa library to enable mock instruments
-        to set interupts.
-        """
-
-        self.session.set_event([event_type].put(None))
-
 
 class MockVisaLibrary(highlevel.VisaLibraryBase):
 
     def _init(self) -> None:
+
         self._sessions: Dict[int, Session] = {}
 
     def list_resources(self, session: int, query='?*::INSTR') -> List[str]:
@@ -358,10 +349,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Return value of the library call.
 
         """
-        return (self._sessions[session].stb.value, StatusCode.success)
-
-
-
+        return (self._sessions[session].stb, StatusCode.success)
 
     def read(self, session_idx: int, count: int=None) -> Tuple[str, STATUS_CODE]:
         reply = self._sessions[session_idx].read()

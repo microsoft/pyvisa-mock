@@ -44,7 +44,7 @@ class Session:
     _SUPPORTED_EVENTS = [
         constants.EventType.service_request,
         ]
-    _stb: StbRegister
+    _stb_register: StbRegister
 
     def __init__(
             self,
@@ -78,15 +78,15 @@ class Session:
             for i in self._SUPPORTED_EVENTS
             }
         self._events_dict_lock = RLock()
-        self._stb: StbRegister = StbRegister()
+        self._stb_register: StbRegister = StbRegister()
 
     @property
     def stb(self) -> int:
-        return self._stb
+        return self._stb_register.value
 
     @stb.setter
     def stb(self, stb: int):
-        self._stb = stb
+        self._stb_register.value = stb
 
     @property
     def device(self) -> BaseMocker:
@@ -96,7 +96,7 @@ class Session:
     def device(self, dev: BaseMocker) -> None:
         self._device = dev
         self._device.events = dict(self._events)
-        self._device._remote_stb = self._stb
+        self._device.stb_register = self._stb_register
 
     def get_attribute(self, attribute):  # TODO: type hints
         """
@@ -165,6 +165,9 @@ class Session:
     a dictionary.  Because of the reentrent/asyncronous nature of events, the
     dictionary access needs to be serialized.  The queues themselves already
     support threaded access.
+
+    These methods are used by the visa mock library to implement mock of
+    event.
 
     """
     def _clear_event_queue(self, event_type: constants.EventType) -> None:
