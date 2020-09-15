@@ -190,7 +190,6 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Return value of the library call.
 
         """
-        print(f'disable_event session_idx:{session}, event_type:{event_type}, mechanism:{mechanism}')
         try:
             cur_session = self._sessions[session]
         except KeyError as e:
@@ -229,7 +228,6 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Return value of the library call.
 
         """
-        print(f'discard_event: session:{session}, event_type:{event_type}, mechanism:{mechanism}')
         try:
             cur_session = self._sessions[session]
         except KeyError as e:
@@ -270,7 +268,6 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Return value of the library call.
 
         """
-        print(f'enable_event: session:{session}, event_type:{event_type}, mechanism:{mechanism}, context:{context}')
         try:
             cur_session = self._sessions[session]
         except KeyError as e:
@@ -317,7 +314,6 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Return value of the library call.
 
         """
-        print(f'wait_on_event: session:{session}, in_event_type:{in_event_type}, timeout:{timeout}')
         try:
             cur_session = self._sessions[session]
         except KeyError as e:
