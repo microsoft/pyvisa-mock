@@ -83,7 +83,6 @@ class Session:
     @property
     def stb(self) -> int:
         rval = self._stb_register.value
-        self._stb_register.value = 0
         return rval
 
     @stb.setter
