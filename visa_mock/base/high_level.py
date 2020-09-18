@@ -1,14 +1,10 @@
-from typing import Dict, List, Tuple, Any, Optional,
-#           ClassVar
+from typing import Dict, List, Tuple, Any
 from time import perf_counter, sleep
 from queue import Queue, Empty
 from collections import defaultdict
 from datetime import timedelta
-#from dataclasses import dataclass
 
 from pyvisa import constants, highlevel, rname, errors
-#from pyvisa import constants, highlevel, errors
-#from pyvisa.rname import register_subclass, ResourceName
 from pyvisa.constants import InterfaceType, StatusCode
 from pyvisa.resources.resource import Resource
 
@@ -27,31 +23,6 @@ rname.build_rn_class(
     (('board', '0'), ("name", "mock"),),
     'INSTR', False
 )
-
-
-#@register_subclass
-#@dataclass
-#class MockInst(ResourceName):
-#    """GPIB INSTR
-#    The syntax is:
-#    Mock[board]::primary_address[::secondary_address][::INSTR]
-#    """
-#
-#    #: GPIB board to use.
-#    board: str = "0"
-#
-#    #: Primary address of the device to connect to
-#    primary_address: str = ""
-#
-#    #: Secondary address of the device to connect to
-#    # Reference for the GPIB secondary address
-#    # https://www.mathworks.com/help/instrument/secondaryaddress.html
-#    secondary_address: str = "0"
-#
-#    interface_type: ClassVar[str] = "MOCK"
-#    resource_class: ClassVar[str] = "INSTR"
-#    is_rc_optional: ClassVar[bool] = False
-#
 
 mock_constant = 1000
 InterfaceType.mock = mock_constant
