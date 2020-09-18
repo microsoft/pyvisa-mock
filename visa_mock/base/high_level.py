@@ -1,11 +1,14 @@
 from typing import Dict, List, Tuple, Any
-from time import perf_counter, sleep
-from queue import Queue, Empty
-from collections import defaultdict
+from time import perf_counter
 from datetime import timedelta
 
 from pyvisa import constants, highlevel, rname, errors
-from pyvisa.constants import InterfaceType, StatusCode
+from pyvisa.constants import (
+    InterfaceType,
+    StatusCode,
+    EventType,
+    EventMechanism,
+    )
 from pyvisa.resources.resource import Resource
 
 from visa_mock.base.register import resources
@@ -68,7 +71,7 @@ class MockResource(Resource):
         (NOTE: This method is copied from the pyvisa library)
         """
         self.enable_event(
-            constants.EventType.service_request, constants.EventMechanism.queue
+            EventType.service_request, EventMechanism.queue
         )
 
         if timeout and not (0 <= timeout <= 4294967295):
@@ -86,12 +89,12 @@ class MockResource(Resource):
                 if adjusted_timeout < 0:
                     adjusted_timeout = 0
 
-            self.wait_on_event(constants.EventType.service_request, adjusted_timeout)
+            self.wait_on_event(EventType.service_request, adjusted_timeout)
             if self.stb & 0x40:
                 break
 
         self.discard_events(
-            constants.EventType.service_request, constants.EventMechanism.queue
+            EventType.service_request, EventMechanism.queue
         )
 
 
@@ -129,7 +132,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
     def open_default_resource_manager(self) -> Tuple[int, STATUS_CODE]:
 
         new_session_idx = self.new_session()
-        return new_session_idx, constants.StatusCode.success
+        return new_session_idx, StatusCode.success
 
     def open(
             self,
@@ -146,14 +149,14 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         session = Session(manager_session_idx, resource_name)
         session.device = device
         new_session_index = self.new_session(session)
-        return new_session_index, constants.StatusCode.success
+        return new_session_index, StatusCode.success
 
     def close(self, session_idx: int) -> STATUS_CODE:
         if session_idx not in self._sessions:
-            return constants.StatusCode.error_invalid_object
+            return StatusCode.error_invalid_object
 
         del self._sessions[session_idx]
-        return constants.StatusCode.success
+        return StatusCode.success
 
     def get_attribute(self, session_idx: int, attribute: int) -> Tuple[Any, STATUS_CODE]:
         """
@@ -168,8 +171,8 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
     def disable_event(
         self,
         session: int,
-        event_type: constants.EventType,
-        mechanism: constants.EventMechanism,
+        event_type: EventType,
+        mechanism: EventMechanism,
     ) -> StatusCode:
         """Disable notification for an event type(s) via the specified mechanism(s).
 
@@ -179,9 +182,9 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         ----------
         session : int
             Unique logical identifier to a session.
-        event_type : constants.EventType
+        event_type : EventType
             Event type.
-        mechanism : constants.EventMechanism
+        mechanism : EventMechanism
             Event handling mechanisms to be disabled.
 
         Returns
@@ -194,7 +197,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             cur_session = self._sessions[session]
         except KeyError as e:
             raise errors.VisaIOError(StatusCode.error_connection_lost) from e
-        if mechanism != constants.EventMechanism.queue:
+        if mechanism != EventMechanism.queue:
             return StatusCode.success
         try:
             cur_session.disable_event(event_type=event_type)
@@ -206,8 +209,8 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
     def discard_events(
         self,
         session: int,
-        event_type: constants.EventType,
-        mechanism: constants.EventMechanism,
+        event_type: EventType,
+        mechanism: EventMechanism,
     ) -> StatusCode:
         """Discard event occurrences for a given type and mechanisms in a session.
 
@@ -219,7 +222,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             Unique logical identifier to a session.
         event_type : constans.EventType
             Logical event identifier.
-        mechanism : constants.EventMechanism
+        mechanism : EventMechanism
             Specifies event handling mechanisms to be discarded.
 
         Returns
@@ -232,7 +235,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             cur_session = self._sessions[session]
         except KeyError as e:
             raise errors.VisaIOError(StatusCode.error_connection_lost) from e
-        if mechanism != constants.EventMechanism.queue:
+        if mechanism != EventMechanism.queue:
             return StatusCode.success
         try:
             cur_session.discard_events(event_type=event_type)
@@ -243,8 +246,8 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
     def enable_event(
         self,
         session: int,
-        event_type: constants.EventType,
-        mechanism: constants.EventMechanism,
+        event_type: EventType,
+        mechanism: EventMechanism,
         context: None = None,
     ) -> StatusCode:
         """Enable event occurrences for specified event types and mechanisms in a session.
@@ -255,9 +258,9 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         ----------
         session : VISASession
             Unique logical identifier to a session.
-        event_type : constants.EventType
+        event_type : EventType
             Logical event identifier.
-        mechanism : constants.EventMechanism
+        mechanism : EventMechanism
             Specifies event handling mechanisms to be enabled.
         context : None, optional
             Unused parameter...
@@ -272,7 +275,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
             cur_session = self._sessions[session]
         except KeyError as e:
             raise errors.VisaIOError(StatusCode.error_connection_lost) from e
-        if mechanism != constants.EventMechanism.queue:
+        if mechanism != EventMechanism.queue:
             raise errors.VisaIOError(StatusCode.error_invalid_mechanism)
         try:
             cur_session.enable_event(event_type)
@@ -286,9 +289,9 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
     def wait_on_event(
         self,
         session: int,
-        in_event_type: constants.EventType,
+        in_event_type: EventType,
         timeout: int
-    ) -> Tuple[constants.EventType, int, StatusCode]:
+    ) -> Tuple[EventType, int, StatusCode]:
         """Wait for an occurrence of the specified event for a given session.
 
         Corresponds to viWaitOnEvent function of the VISA library.
@@ -297,7 +300,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         ----------
         session : VISASession
             Unique logical identifier to a session.
-        in_event_type : constants.EventType
+        in_event_type : EventType
             Logical identifier of the event(s) to wait for.
         timeout : int
             Absolute time period in time units that the resource shall wait for
@@ -306,7 +309,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
 
         Returns
         -------
-        constants.EventType
+        EventType
             Logical identifier of the event actually received
         int
             A handle specifying the unique occurrence of an event
@@ -350,11 +353,11 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
 
     def read(self, session_idx: int, count: int=None) -> Tuple[str, STATUS_CODE]:
         reply = self._sessions[session_idx].read()
-        return reply, constants.StatusCode.success
+        return reply, StatusCode.success
 
     def write(self, session_idx: int, data: str) -> STATUS_CODE:
         self._sessions[session_idx].write(data)
-        return constants.StatusCode.success
+        return StatusCode.success
 
     def clear(self, session_idx: int) -> None:
         return None
