@@ -1,18 +1,34 @@
+from dataclasses import dataclass
 from typing import Dict, List, Tuple, Any
+from typing_extensions import ClassVar
 
 from pyvisa import constants, highlevel, rname, errors
 from pyvisa.constants import InterfaceType
 from pyvisa.resources.resource import Resource
+from pyvisa.rname import register_subclass, ResourceName
 
 from visa_mock.base.register import resources
 from visa_mock.base.session import Session
 
 STATUS_CODE = int
-rname.build_rn_class(
-    "MOCK",
-    (('board', '0'), ("name", "mock"),),
-    'INSTR', False
-)
+
+
+@register_subclass
+@dataclass
+class MockInstr(ResourceName):
+    """
+    for mock instrument, the syntax is:
+    MOCK[board]::[name]::INSTR
+    """
+    board: str = "0"
+    name: str = "mock"
+
+    interface_type: ClassVar[str] = "MOCK"
+    resource_class: ClassVar[str] = "INSTR"
+    is_rc_optional: ClassVar[bool] = False
+
+
+mock_instr = MockInstr()
 
 mock_constant = 1000
 InterfaceType.mock = mock_constant
@@ -120,3 +136,10 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
 
     def clear(self, session_idx: int) -> None:
         return None
+
+    @staticmethod
+    def get_library_paths():
+        """Override this method to return an iterable of possible library_paths
+        to try in case that no argument is given.
+        """
+        return 'unset',
