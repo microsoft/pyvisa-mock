@@ -44,7 +44,6 @@ class Session:
     _SUPPORTED_EVENTS = [
         constants.EventType.service_request,
         ]
-    _stb_register: StbRegister
 
     def __init__(
             self,
@@ -78,16 +77,20 @@ class Session:
             for i in self._SUPPORTED_EVENTS
             }
         self._events_dict_lock = RLock()
-        self._stb_register: StbRegister = StbRegister()
 
     @property
     def stb(self) -> int:
-        rval = self._stb_register.value
-        return rval
+        if self._device is None:
+            raise SessionError(
+                'The stb register can\'t be accesses because there is no registered device')
+        return self._device.stb_register.value
 
     @stb.setter
     def stb(self, stb: int):
-        self._stb_register.value = stb
+        if self._device is None:
+            raise SessionError(
+                'The stb register can\'t be accesses because there is no registered device')
+        self._device.stb_register.value = stb
 
     @property
     def device(self) -> BaseMocker:
@@ -97,7 +100,6 @@ class Session:
     def device(self, dev: BaseMocker) -> None:
         self._device = dev
         self._device.events = dict(self._events)
-        self._device.stb_register = self._stb_register
 
     def get_attribute(self, attribute):  # TODO: type hints
         """

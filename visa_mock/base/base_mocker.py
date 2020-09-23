@@ -17,6 +17,10 @@ class StbRegister():
     """
     This class is used to allow the mocker and session to both refrence one
     register instance.
+
+    This is the most basic StbRegister with no extra logic around reading and
+    writing the value.  Mockers can create custom StbRegister classes and
+    override the _create_stb_register method.
     """
     value: int = 0
 
@@ -163,13 +167,13 @@ class BaseMocker(metaclass=MockerMetaClass):
     __scpi_dict__: Dict[str, Callable] = {}
     _events: Dict[constants.EventType, Queue]
     # Should be created and set by session
-    _stb_register: Optional[StbRegister]
+    _stb_register: StbRegister
 
     def __init__(self, call_delay: float = 0.0):
         self._call_delay = call_delay
-        # will be updated with supported events when iregistered with session
+        # will be updated with supported events when registered with session
         self._events: Dict[constants.EventType, Queue] = {}
-        self._stb_register: Optional[StbRegister] = None
+        self._stb_register: StbRegister = self._create_stb_register()
 
     def set_call_delay(
             self,
@@ -288,41 +292,38 @@ class BaseMocker(metaclass=MockerMetaClass):
     """
     Status Byte Support:
 
-    The following methods enable status byte support.  The status byte
-    register object is created and held on by the session.  This allows
-    the visa library mocker to access this register.
+    The following methods enable status byte support.  The status byte register
+    object is created by the mocker and shared with the session.  This allows
+    the visa library mocker to access this register.  It also allows the
+    mockers to implement custom logic.
 
     The session holds the state information about the device including the
     status byte.  When the mocker is registered with the session, the session
-    sets the status byte reference in the mocker.
+    gets the status byte reference from the mocker.
 
     """
-    def set_stb(self, stb: int) -> None:
-        if self._stb_register is None:
-            raise MockingError(
-                'Remote session STB setter not set.  Session does not support'
-                ' stb or session not started.')
-        self._stb_register.value = stb
+    def _set_stb(self, stb: int) -> None:
+        self.stb_register.value = stb
 
-    def get_stb(self) -> int:
-        if self._stb_register is None:
-            raise MockingError(
-                'Remote session STB setter not set.  Session does not support'
-                ' stb or session not started.')
-        return self._stb_register.value
+    def _get_stb(self) -> int:
+        return self.stb_register.value
 
     stb = property(
-        fget=get_stb,
-        fset=set_stb,
+        fget=_get_stb,
+        fset=_set_stb,
         doc="stb register")
 
-    def _set_stb_register(self, stb_register: StbRegister):
-        self._stb_register = stb_register
+    @property
+    def stb_register(self) -> StbRegister:
+        return self._stb_register
 
-    stb_register = property(
-        fget=None,
-        fset=_set_stb_register,
-        doc="Stb register.")
+    @staticmethod
+    def _create_stb_register() -> StbRegister:
+        """
+        Allow the child class to override StbRegister creation with custom
+        register with custom logic/behavior.
+        """
+        return StbRegister()
 
 
 scpi = BaseMocker.scpi

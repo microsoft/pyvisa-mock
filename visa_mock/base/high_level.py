@@ -53,7 +53,7 @@ class MockResource(Resource):
 
     def read_stb(self) -> int:
         """Service request status register."""
-        value, retcode = self.visalib.read_stb(self.session)
+        value, _ = self.visalib.read_stb(self.session)
         return value
 
     def wait_for_srq(self, timeout: int = 25000) -> None:
@@ -74,7 +74,7 @@ class MockResource(Resource):
             EventType.service_request, EventMechanism.queue
         )
 
-        if timeout and not (0 <= timeout <= 4294967295):
+        if timeout and not 0 <= timeout <= 4294967295:
             raise ValueError("timeout value is invalid")
 
         starting_time = perf_counter()
