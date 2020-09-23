@@ -195,6 +195,18 @@ class BaseMocker(metaclass=MockerMetaClass):
             self.__scpi_dict__[compile_regular_expression(scpi_string)].call_delay = call_delay
 
     @classmethod
+    def exact_match(cls, re_string: str) -> Callable:
+        def decorator(function):
+            handler = SCPIHandler.from_method(function)
+            return_type = handler.return_type
+
+            if isinstance(return_type, MockerMetaClass):
+                raise NotImplementedError('Submodule not supported by for exact match commands.')
+            __tmp_scpi_dict__[re_string] = handler
+            return
+        return decorator
+
+    @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
         def decorator(function):
             handler = SCPIHandler.from_method(function)
@@ -228,7 +240,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.match(regex_pattern, scpi_string, re.IGNORECASE)
+            search_result = re.match(regex_pattern, scpi_string)
             if search_result:
                 if not found:
                     found = True
@@ -327,6 +339,7 @@ class BaseMocker(metaclass=MockerMetaClass):
 
 
 scpi = BaseMocker.scpi
+exact_match = BaseMocker.exact_match
 
 
 def compile_regular_expression(scpi_string: str) -> str:
@@ -371,5 +384,7 @@ def compile_regular_expression(scpi_string: str) -> str:
         "(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?",
         scpi_string
     )
+    # Add inline case insenstive flag to regex
+    regex = '(?i)' + regex
 
     return regex
