@@ -1,7 +1,7 @@
 from visa_mock.base.register import register_resources
 from visa_mock.test.mock_instruments import instruments
 
-from visa import ResourceManager
+from pyvisa import ResourceManager
 
 
 def test_sanity():
