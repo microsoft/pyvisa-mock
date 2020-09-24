@@ -2,8 +2,9 @@ from typing import Dict
 from collections import defaultdict
 import time
 from threading import Thread
+from enum import Enum, auto
 
-from visa_mock.base.base_mocker import BaseMocker, scpi
+from visa_mock.base.base_mocker import BaseMocker, scpi, scpi_raw_regex
 
 
 class Mocker0(BaseMocker):
@@ -156,10 +157,57 @@ class Mocker5(BaseMocker):
         return self._voltage[channel]
 
 
+class MockerResponse(Enum):
+    PASS_COMMAND = auto()
+    FAIL_COMMAND = auto()
+    UPPER_COMMAND = auto()
+    LOWER_COMMAND = auto()
+    OKAY_BOARDER = auto()
+    NOT_OKAY_BOARDER = auto()
+
+
+class Mocker6(BaseMocker):
+    """
+    A mocker class with mixed scpi and scpi_raw_regex commands.
+    """
+
+    def __init__(self, call_delay: float = 0.0) -> None:
+        super().__init__(call_delay=call_delay)
+
+    # This command can pass if the command sent to device doesn't overlap with below.
+    @scpi(r":PASSfail")
+    def _pass_command_scpi(self) -> int:
+        return MockerResponse.PASS_COMMAND.value
+
+    # This command should always fail because of overlap with above
+    @scpi_raw_regex(r":passFAIL")
+    def _fail_command_scpi_raw(self) -> int:
+        # We shouldn't be able to get this return value back
+        return MockerResponse.FAIL_COMMAND.value
+
+    # This command should always fail because of overlap with above
+    @scpi_raw_regex(r":CASETEST")
+    def _case_test_upper(self) -> int:
+        return MockerResponse.UPPER_COMMAND.value
+
+    @scpi_raw_regex(r":casetest")
+    def _case_test_lower(self) -> int:
+        return MockerResponse.LOWER_COMMAND.value
+
+    @scpi_raw_regex(r"okay->")
+    def _okay_boarder_test(self) -> int:
+        return MockerResponse.OKAY_BOARDER.value
+
+    @scpi_raw_regex(r"<-not okay->$")
+    def _not_okay_boarder(self) -> int:
+        return MockerResponse.NOT_OKAY_BOARDER.value
+
+
 resources = {
     "MOCK0::mock1::INSTR": Mocker1(),
     "MOCK0::mock2::INSTR": Mocker2(),
     "MOCK0::mock3::INSTR": Mocker3(),
     "MOCK0::mock4::INSTR": Mocker4(),
     "MOCK0::mock5::INSTR": Mocker5(),
+    "MOCK0::mock6::INSTR": Mocker6(),
 }

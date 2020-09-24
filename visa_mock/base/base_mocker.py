@@ -195,13 +195,13 @@ class BaseMocker(metaclass=MockerMetaClass):
             self.__scpi_dict__[compile_regular_expression(scpi_string)].call_delay = call_delay
 
     @classmethod
-    def exact_match(cls, re_string: str) -> Callable:
+    def scpi_raw_regex(cls, re_string: str) -> Callable:
         def decorator(function):
             handler = SCPIHandler.from_method(function)
             return_type = handler.return_type
 
             if isinstance(return_type, MockerMetaClass):
-                raise NotImplementedError('Submodule not supported by for exact match commands.')
+                raise MockingError('Submodule not supported by for exact match commands.')
             __tmp_scpi_dict__[re_string] = handler
             return
         return decorator
@@ -339,7 +339,7 @@ class BaseMocker(metaclass=MockerMetaClass):
 
 
 scpi = BaseMocker.scpi
-exact_match = BaseMocker.exact_match
+scpi_raw_regex = BaseMocker.scpi_raw_regex
 
 
 def compile_regular_expression(scpi_string: str) -> str:
