@@ -73,7 +73,7 @@ class Session:
             for i in self._SUPPORTED_EVENTS
             }
         self._events_enabled: Dict[constants.EventType, bool] = {
-            constants.EventType.service_request: False
+            i: False
             for i in self._SUPPORTED_EVENTS
             }
         self._events_dict_lock = RLock()
@@ -193,7 +193,7 @@ class Session:
             raise EventNotSupportedError()
         with self._events_dict_lock:
             if self._events_enabled[event_type]:
-                self._events_enabled = False
+                self._events_enabled[event_type] = False
             else:
                 raise EventNotEnabledError('Event not enabled.')
 
@@ -201,24 +201,24 @@ class Session:
         if event_type not in self._SUPPORTED_EVENTS:
             raise EventNotSupportedError()
         with self._events_dict_lock:
-            if not self._events_enabled:
+            if not self._events_enabled[event_type]:
                 raise EventNotEnabledError('Event not enabled.')
             self._clear_event_queue(event_type)
 
     def set_event(self, event_type: constants.EventType) -> None:
         if event_type not in self._SUPPORTED_EVENTS:
             raise EventNotSupportedError()
-        cur_event = self._events[event_type]
-        if not self._events_enabled:
+        if not self._events_enabled[event_type]:
             raise EventNotEnabledError('Event not enabled.')
+        cur_event = self._events[event_type]
         cur_event.put(None)
 
     def wait_for_event(self, event_type: constants.EventType, timeout: timedelta) -> None:
         if event_type not in self._SUPPORTED_EVENTS:
             raise EventNotSupportedError()
-        cur_event = self._events[event_type]
-        if not self._events_enabled:
+        if not self._events_enabled[event_type]:
             raise EventNotEnabledError('Event not enabled.')
+        cur_event = self._events[event_type]
         try:
             cur_event.get(timeout=timeout.total_seconds())
         except Empty as e:

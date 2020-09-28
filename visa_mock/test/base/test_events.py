@@ -5,7 +5,7 @@ from visa_mock.base.high_level import MockResource
 from visa_mock.test.mock_instruments import instruments
 from visa_mock.test.mock_instruments.instruments import Mocker5
 
-from visa import ResourceManager
+from pyvisa import ResourceManager
 from pyvisa.errors import VisaIOError
 from pyvisa.constants import StatusCode
 

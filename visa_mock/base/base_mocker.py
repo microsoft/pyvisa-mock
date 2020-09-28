@@ -13,9 +13,9 @@ from pyvisa import constants
 
 
 @dataclass
-class StbRegister():
+class StbRegister:
     """
-    This class is used to allow the mocker and session to both refrence one
+    This class is used to allow the mocker and session to both reference one
     register instance.
 
     This is the most basic StbRegister with no extra logic around reading and
@@ -265,7 +265,7 @@ class BaseMocker(metaclass=MockerMetaClass):
     """
     Event Support:
 
-    The following methods enable event/inturrupt support.  Events are
+    The following methods enable event/interrupt support.  Events are
     implemented with queues.  For each event type (consts.EventType) that is
     supported there is a corresponding queue.  These are stored in a
     dictionary.
