@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 from time import perf_counter
 from typing_extensions import ClassVar
 from datetime import timedelta
@@ -384,3 +384,63 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         to try in case that no argument is given.
         """
         return 'unset',
+
+    def lock(
+            self,
+            session: int,
+            lock_type: constants.Lock,
+            timeout: int,
+            requested_key: Optional[str] = None,) -> Tuple[str, StatusCode]:
+        """Establishes an access mode to the specified resources.
+        Corresponds to viLock function of the VISA library.
+        Parameters
+        ----------
+        session : VISASession
+            Unique logical identifier to a session.
+        lock_type : constants.Lock
+            Specifies the type of lock requested.
+        timeout : int
+            Absolute time period (in milliseconds) that a resource waits to get
+            unlocked by the locking session before returning an error.
+        requested_key : Optional[str], optional
+            Requested locking key in the case of a shared lock. For an exclusive
+            lock it should be None.
+        Returns
+        -------
+        Optional[str]
+            Key that can then be passed to other sessions to share the lock, or
+            None for an exclusive lock.
+        StatusCode
+            Return value of the library call.
+        """
+        if lock_type != constants.Lock.exclusive:
+            raise NotImplementedError(f'Only constant.Lock.exclusive supported.  ({lock_type})')
+        if requested_key is not None:
+            raise NotImplementedError(f'Requested key is not supported. ({requested_key})')
+        try:
+            cur_session = self._sessions[session]
+        except KeyError as e:
+            raise errors.VisaIOError(StatusCode.error_connection_lost) from e
+        acquired = cur_session.resource_lock.acquire(timeout=timeout/1000)
+        if not acquired:
+            raise errors.VisaIOError(StatusCode.error_timeout)
+        return ('', StatusCode.success)
+
+    def unlock(self, session: int) -> StatusCode:
+        """Relinquish a lock for the specified resource.
+        Corresponds to viUnlock function of the VISA library.
+        Parameters
+        ----------
+        session : VISASession
+            Unique logical identifier to a session.
+        Returns
+        -------
+        StatusCode
+            Return value of the library call.
+        """
+        try:
+            cur_session = self._sessions[session]
+        except KeyError as e:
+            raise errors.VisaIOError(StatusCode.error_connection_lost) from e
+        cur_session.resource_lock.release()
+        return StatusCode.success

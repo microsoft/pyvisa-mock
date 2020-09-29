@@ -41,6 +41,7 @@ class Session:
     _events_enabled: Dict[constants.EventType, bool]
     # Serialized access to the dictionary not the events
     _events_dict_lock: RLock
+    _resource_lock: RLock
     _SUPPORTED_EVENTS = [
         constants.EventType.service_request,
         ]
@@ -77,6 +78,7 @@ class Session:
             for i in self._SUPPORTED_EVENTS
             }
         self._events_dict_lock = RLock()
+        self.resource_lock = RLock()
 
     @property
     def stb(self) -> int:
