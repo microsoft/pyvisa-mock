@@ -5,7 +5,9 @@ from typing_extensions import ClassVar
 from pyvisa import constants, highlevel, rname, errors
 from pyvisa.constants import InterfaceType
 from pyvisa.resources.resource import Resource
+from pyvisa.resources import SerialInstrument
 from pyvisa.rname import register_subclass, ResourceName
+from pyvisa.typing import VISASession
 
 from visa_mock.base.register import resources
 from visa_mock.base.session import Session
@@ -35,7 +37,7 @@ InterfaceType.mock = mock_constant
 
 
 @Resource.register(mock_constant, "INSTR")
-class MockResource(Resource):
+class MockResource(SerialInstrument):
 
     def read(self, **kwargs) -> str:
         reply, status_code = self.visalib.read(self.session)
@@ -126,7 +128,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         """
         return self._sessions[session_idx].set_attribute(attribute, attribute_state)
 
-    def read(self, session_idx: int, count: int=None) -> Tuple[str, STATUS_CODE]:
+    def read(self, session_idx: int, count: int = None) -> Tuple[str, STATUS_CODE]:
         reply = self._sessions[session_idx].read()
         return reply, constants.StatusCode.success
 
@@ -143,3 +145,8 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         to try in case that no argument is given.
         """
         return 'unset',
+
+    def flush(
+        self, session: VISASession, mask: constants.BufferOperation
+    ) -> None:
+        return None
