@@ -12,7 +12,9 @@ from pyvisa.constants import (
     EventMechanism,
     )
 from pyvisa.resources.resource import Resource
+from pyvisa.resources import SerialInstrument
 from pyvisa.rname import register_subclass, ResourceName
+from pyvisa.typing import VISASession
 
 from visa_mock.base.register import resources
 from visa_mock.base.session import (
@@ -48,7 +50,7 @@ InterfaceType.mock = mock_constant
 
 
 @Resource.register(mock_constant, "INSTR")
-class MockResource(Resource):
+class MockResource(SerialInstrument):
 
     def read(self, **kwargs) -> str:
         reply, status_code = self.visalib.read(self.session)
@@ -367,7 +369,7 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         stb_val = self._sessions[session].stb
         return (stb_val, StatusCode.success)
 
-    def read(self, session_idx: int, count: int=None) -> Tuple[str, STATUS_CODE]:
+    def read(self, session_idx: int, count: int = None) -> Tuple[str, STATUS_CODE]:
         reply = self._sessions[session_idx].read()
         return reply, StatusCode.success
 
@@ -384,6 +386,11 @@ class MockVisaLibrary(highlevel.VisaLibraryBase):
         to try in case that no argument is given.
         """
         return 'unset',
+
+    def flush(
+        self, session: VISASession, mask: constants.BufferOperation
+    ) -> None:
+        return None
 
     def lock(
             self,
