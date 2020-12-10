@@ -1,7 +1,28 @@
 from inspect import signature
-from typing import Dict, List, Callable, Any, cast, get_type_hints, Optional
+from typing import (
+    Dict, List, Callable,
+    Any, cast, get_type_hints,
+    Optional,
+    )
+from dataclasses import dataclass
 import re
 import time
+from queue import Queue
+
+from pyvisa import constants
+
+
+@dataclass
+class StbRegister:
+    """
+    This class is used to allow the mocker and session to both reference one
+    register instance.
+
+    This is the most basic StbRegister with no extra logic around reading and
+    writing the value.  Mockers can create custom StbRegister classes and
+    override the _create_stb_register method.
+    """
+    value: int = 0
 
 
 class MockingError(Exception):
@@ -144,9 +165,15 @@ class MockerMetaClass(type):
 
 class BaseMocker(metaclass=MockerMetaClass):
     __scpi_dict__: Dict[str, Callable] = {}
+    _events: Dict[constants.EventType, Queue]
+    # Should be created and set by session
+    _stb_register: StbRegister
 
     def __init__(self, call_delay: float = 0.0):
         self._call_delay = call_delay
+        # will be updated with supported events when registered with session
+        self._events: Dict[constants.EventType, Queue] = {}
+        self._stb_register: StbRegister = self._create_stb_register()
 
     def set_call_delay(
             self,
@@ -166,6 +193,18 @@ class BaseMocker(metaclass=MockerMetaClass):
             self._call_delay = call_delay
         else:
             self.__scpi_dict__[compile_regular_expression(scpi_string)].call_delay = call_delay
+
+    @classmethod
+    def scpi_raw_regex(cls, re_string: str) -> Callable:
+        def decorator(function):
+            handler = SCPIHandler.from_method(function)
+            return_type = handler.return_type
+
+            if isinstance(return_type, MockerMetaClass):
+                raise MockingError('Submodule not supported by for exact match commands.')
+            __tmp_scpi_dict__[re_string] = handler
+            return
+        return decorator
 
     @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
@@ -201,7 +240,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
-            search_result = re.match(regex_pattern, scpi_string, re.IGNORECASE)
+            search_result = re.match(regex_pattern, scpi_string)
             if search_result:
                 if not found:
                     found = True
@@ -223,8 +262,84 @@ class BaseMocker(metaclass=MockerMetaClass):
 
         return str(handler(self, *args))
 
+    """
+    Event Support:
+
+    The following methods enable event/interrupt support.  Events are
+    implemented with queues.  For each event type (consts.EventType) that is
+    supported there is a corresponding queue.  These are stored in a
+    dictionary.
+
+    The session holds the state information about the device including events.
+    When the mocker is registered with the session, the session sets the
+    events dictionary in the mocker.
+    """
+
+    def set_events(self, events: Dict[constants.EventType, Queue]):
+        """
+        The event dict should be set by the session when the mocker is
+        registered with the session.
+        """
+        self._events = events
+
+    def get_events(self) -> Dict[constants.EventType, Queue]:
+        return self._events
+
+    events = property(
+        fget=get_events,
+        fset=set_events,
+        doc="Events dictionary holds event queues.")
+
+    def set_service_request_event(self):
+        """
+        Create an service request event.
+        """
+        try:
+            cur_event = self.events[constants.EventType.service_request]
+        except KeyError as e:
+            raise MockingError(
+                'Device does not support service request events or session not started.') from e
+        cur_event.put(None)
+
+    """
+    Status Byte Support:
+
+    The following methods enable status byte support.  The status byte register
+    object is created by the mocker and shared with the session.  This allows
+    the visa library mocker to access this register.  It also allows the
+    mockers to implement custom logic.
+
+    The session holds the state information about the device including the
+    status byte.  When the mocker is registered with the session, the session
+    gets the status byte reference from the mocker.
+
+    """
+    def _set_stb(self, stb: int) -> None:
+        self.stb_register.value = stb
+
+    def _get_stb(self) -> int:
+        return self.stb_register.value
+
+    stb = property(
+        fget=_get_stb,
+        fset=_set_stb,
+        doc="stb register")
+
+    @property
+    def stb_register(self) -> StbRegister:
+        return self._stb_register
+
+    @staticmethod
+    def _create_stb_register() -> StbRegister:
+        """
+        Allow the child class to override StbRegister creation with custom
+        register with custom logic/behavior.
+        """
+        return StbRegister()
+
 
 scpi = BaseMocker.scpi
+scpi_raw_regex = BaseMocker.scpi_raw_regex
 
 
 def compile_regular_expression(scpi_string: str) -> str:
@@ -269,5 +384,7 @@ def compile_regular_expression(scpi_string: str) -> str:
         "(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?",
         scpi_string
     )
+    # Add inline case insenstive flag to regex
+    regex = '(?i)' + regex
 
     return regex
