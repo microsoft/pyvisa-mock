@@ -75,7 +75,7 @@ class SCPIHandler:
                 "This decorator requires all arguments to be annotated"
             )
 
-        return cls(method, annotations, return_type)
+        return cls(method, list(parameters), annotations, return_type)
 
     @classmethod
     def combine(
@@ -87,29 +87,51 @@ class SCPIHandler:
         Combine two handlers, each processing part of a SCPI message.
         """
         handler_arg_count = len(handler.annotations)
+        parameters = list(handler.parameters)
+        parameters.extend(sub_handler.parameters)
         annotations = list(handler.annotations)
         annotations.extend(sub_handler.annotations)
 
-        def method(self, *args):
-            handler_args = args[:handler_arg_count]
-            sub_handler_args = args[handler_arg_count:]
+        def method(self, *args, **kwargs):
+            handler_args = ()
+            handler_kwargs = {}
+            sub_handler_args = ()
+            sub_handler_kwargs = {}
+
+            if args:
+                handler_args = args[:handler_arg_count]
+                sub_handler_args = args[handler_arg_count:]
+
+            if kwargs:
+                handler_kwargs = {
+                    parameter: kwargs[parameter]
+                    for parameter in parameters[:handler_arg_count]
+                }
+
+                sub_handler_kwargs = {
+                    parameter: kwargs[parameter]
+                    for parameter in parameters[handler_arg_count:]
+                }
+
             # The first handler returns a submodule
-            sub_module = handler(self, *handler_args)
+            sub_module = handler(self, *handler_args, **handler_kwargs)
             # 'sub_handler' is a *class* method, meaning that the
             # first argument needs to be a 'self'. This is
             # provided by the first handler.
             return sub_handler(
                 sub_module,
-                *sub_handler_args
+                *sub_handler_args,
+                **sub_handler_kwargs
             )
 
         return cls(
-            method, annotations, sub_handler.return_type
+            method, parameters, annotations, sub_handler.return_type
         )
 
     def __init__(
             self,
             method: Callable,
+            parameters: List,
             annotations: List,
             return_type: type
     ) -> None:
@@ -124,22 +146,33 @@ class SCPIHandler:
             return_type: Specify the return type of the method.
         """
         self.method = method
+        self.parameters = parameters
         self.annotations = annotations
         self.return_type = return_type
         self.call_delay = None
 
-    def __call__(self, mocker_self, *args):
+    def __call__(self, mocker_self, *args, **kwargs):
         """
         The values in the arguments are strings because we have parsed a
         SCPI message string. Convert these string to the appropriate type
         using the annotations and call the handler method.
         """
-        new_args = [
-            annotation_type(value)
-            for annotation_type, value in zip(self.annotations, args)
-        ]
+        new_args = ()
+        new_kwargs = {}
 
-        return self.method(mocker_self, *new_args)
+        if args:
+            new_args = [
+                annotation_type(value)
+                for annotation_type, value in zip(self.annotations, args)
+            ]
+
+        if kwargs:
+            new_kwargs = {
+                name: annotation_type(value)
+                for annotation_type, (name, value) in zip(self.annotations, kwargs.items())
+            }
+
+        return self.method(mocker_self, *new_args, **new_kwargs)
 
 
 __tmp_scpi_dict__: Dict[str, SCPIHandler] = {}
@@ -196,6 +229,14 @@ class BaseMocker(metaclass=MockerMetaClass):
 
     @classmethod
     def scpi_raw_regex(cls, re_string: str) -> Callable:
+        """
+        Decorator to add the decorated method as a SCPI handler.
+
+        Args:
+            re_string: A regular expression. When a message is send
+                to this mock instrument that matches this regex, the
+                decorated method is called.
+        """
         def decorator(function):
             handler = SCPIHandler.from_method(function)
             return_type = handler.return_type
@@ -208,6 +249,19 @@ class BaseMocker(metaclass=MockerMetaClass):
 
     @classmethod
     def scpi(cls, scpi_string: str) -> Callable:
+        """
+        Decorator to add the decorated method as a SCPI handler.
+
+        Args:
+            scpi_string: When a message is send to this mock
+                instrument that matches the scpi string, this
+                method is called. Note that the scpi string is
+                *not* a regular expression. Rather, a regular
+                expression is compiled from the scpi string.
+                Please see the doc string of
+                'compile_regular_expression' also defined in this
+                module.
+        """
         def decorator(function):
             handler = SCPIHandler.from_method(function)
             return_type = handler.return_type
@@ -227,6 +281,10 @@ class BaseMocker(metaclass=MockerMetaClass):
             SubModule = cast(MockerMetaClass, return_type)
 
             for regex_sub_string, sub_handler in SubModule.__scpi_dict__.items():
+
+                if regex_sub_string.startswith('(?i)'):
+                    regex_sub_string = regex_sub_string.replace('(?i)', '', 1)
+
                 __tmp_scpi_dict__[regex + regex_sub_string] = SCPIHandler.combine(
                     handler, sub_handler
                 )
@@ -236,7 +294,8 @@ class BaseMocker(metaclass=MockerMetaClass):
     def send(self, scpi_string: str) -> Any:
 
         found = False
-        args = None
+        args = ()
+        kwargs = {}
         handler = None
 
         for regex_pattern in self.__scpi_dict__:
@@ -245,7 +304,9 @@ class BaseMocker(metaclass=MockerMetaClass):
                 if not found:
                     found = True
                     handler = self.__scpi_dict__[regex_pattern]
-                    args = search_result.groups()
+                    kwargs = search_result.groupdict()
+                    if not kwargs:
+                        args = search_result.groups()
                 else:
                     raise MockingError(
                         f"SCPI command {scpi_string} matches multiple mocker "
@@ -260,7 +321,7 @@ class BaseMocker(metaclass=MockerMetaClass):
         else:
             time.sleep(self._call_delay)
 
-        return str(handler(self, *args))
+        return str(handler(self, *args, **kwargs))
 
     """
     Event Support:
@@ -343,23 +404,32 @@ scpi_raw_regex = BaseMocker.scpi_raw_regex
 
 
 def compile_regular_expression(scpi_string: str) -> str:
-    """
+    r"""
     This function creates a regular expression pattern given a
-    SCPI string. This regular expression follows the SCPI
-    language rule where upper case letters denote the short form
+    SCPI string. This regular expression has the following characteristics:
+
+    1) The SCPI language rule where upper case letters denote the short form
     of a SCPI command. A SCPI message send by software to the
     instrument must match either the long or the short form.
 
+    2) Strings between '<' and '>' will become keys when calling 'groupsdict'
+    on a re.match object.
+
+    3) The regular expression is case insensitive.
+
+    4) SCPI strings containing "?" and "*" will be replaced with "\?" and "\*"
+    in the regular expression
+
     Examples:
-        >>> scpi_pattern = "VOLTage:CHANnel(.*) (.*)"  # From an instrument manual
+        >>> scpi_pattern = "VOLTage:CHANnel<number> <value>"  # From an instrument manual
         >>> # the upper case part denotes the command short form
         >>> regex = compile_regular_expression(scpi_pattern)
         >>> # Sanity check to see if we match the long form:
-        >>> assert re.match(regex, "voltage:channel1 2.3").groups() == ('1', '2.3')
-        >>> # Check if we match the shortform:
-        >>> assert re.match(regex, "volt:chan1 2.3").groups() == ('1', '2.3')
+        >>> assert re.match(regex, "voltage:channel1 2.3").groupdict() == {'number':'1', 'value': '2.3'}
+        >>> # Check if we match the short form:
+        >>> assert re.match(regex, "volt:chan1 2.3").groupdict() == {'number':'1', 'value': '2.3'}
         >>> # We should be able to mix and match:
-        >>> assert re.match(regex, "voltage:chan1 2.3").groups() == ('1', '2.3')
+        >>> assert re.match(regex, "voltage:chan1 2.3").groupdict() == {'number':'1', 'value': '2.3'}
 
     Args:
         scpi_string: A string representing a pattern with which SCPI commands send by
@@ -379,12 +449,15 @@ def compile_regular_expression(scpi_string: str) -> str:
 
         Section "Non-capturing and Named Groups"
     """
+    regex = re.sub(r"\?", r"\\?", scpi_string)
+    regex = re.sub(r"\*", r"\\*", regex)
+    regex = re.sub(r"<(?P<name>.*?)>", r"(?P<\g<name>>.*)", regex)
 
     regex = re.sub(
-        "(?P<chr>[A-Z])(?P<name>[a-z]+)", "\g<chr>(?:\g<name>)?",
-        scpi_string
+        "(?P<chr>[A-Z])(?P<name>[a-z]+)", r"\g<chr>(?:\g<name>)?",
+        regex
     )
-    # Add inline case insenstive flag to regex
+    # Add inline case insensitive flag to regex
     regex = '(?i)' + regex
 
     return regex

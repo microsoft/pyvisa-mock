@@ -25,7 +25,7 @@ def test_delay_on_instrument():
 def test_delay_on_command():
     call_delay = 2.0        # unit: [sec]
     mocker = Mocker1()
-    cmd_w_delay = ":INSTR:CHANNEL(.*):VOLT (.*)"
+    cmd_w_delay = ":INSTRument:CHANNEL<channel>:VOLTage <value>"
 
     # To introduce delay to one cmd only:
     mocker.set_call_delay(call_delay, cmd_w_delay)

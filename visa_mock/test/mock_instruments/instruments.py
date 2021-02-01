@@ -20,11 +20,11 @@ class Mocker0(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = defaultdict(lambda: 0.0)
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLTage (.*)")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage <value>")
     def _set_voltage(self, channel: int, value: float) -> None:
         self._voltage[channel] = value
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLTage\?")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage?")
     def _get_voltage(self, channel: int) -> float:
         return self._voltage[channel]
 
@@ -39,11 +39,11 @@ class Mocker1(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = defaultdict(lambda: 0.0)
 
-    @scpi(r":INSTR:CHANNEL(.*):VOLT (.*)")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage <value>")
     def _set_voltage(self, channel: int, value: float) -> None:
         self._voltage[channel] = value
 
-    @scpi(r":INSTR:CHANNEL(.*):VOLT\?")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage?")
     def _get_voltage(self, channel: int) -> float:
         return self._voltage[channel]
 
@@ -58,11 +58,11 @@ class Mocker2(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = defaultdict(lambda: 0.0)
 
-    @scpi(r":INSTR:CHANNEL(.*):VOLT (.*)")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage <value>")
     def _set_voltage(self, channel: int, value: float) -> None:
         self._voltage[channel] = value
 
-    @scpi(r":INSTR:CHANNEL(.*):VOLT\?")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage?")
     def _get_voltage(self, channel: int) -> float:
         return 2 * self._voltage[channel]
 
@@ -73,11 +73,11 @@ class MockerChannel(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage = 0
 
-    @scpi(r":VOLTage (.*)")
+    @scpi(":VOLTage <voltage>")
     def _set_voltage(self, voltage: float) -> None:
         self._voltage = voltage
 
-    @scpi(r":VOLTage\?")
+    @scpi(":VOLTage?")
     def _get_voltage(self) -> float:
         return self._voltage
 
@@ -91,7 +91,7 @@ class Mocker3(BaseMocker):
             2: MockerChannel()
         }
 
-    @scpi(r":CHANNEL(.*)")
+    @scpi(":CHANNEL<number>")
     def _channel(self, number: int) -> MockerChannel:
         return self._channels[number]
 
@@ -105,9 +105,9 @@ class Mocker4(BaseMocker):
             2: Mocker3()
         }
 
-    @scpi(r":INSTRument(.*)")
-    def _channel(self, number: int) -> Mocker3:
-        return self._instruments[number]
+    @scpi(":INSTRument<instrument_num>")
+    def _channel(self, instrument_num: int) -> Mocker3:
+        return self._instruments[instrument_num]
 
 
 class Mocker5(BaseMocker):
@@ -123,15 +123,15 @@ class Mocker5(BaseMocker):
         super().__init__(call_delay=call_delay)
         self._voltage: Dict[int, float] = defaultdict(lambda: 0.0)
 
-    @scpi(r'\*CLS')
+    @scpi(r'*CLS')
     def clear_stb(self) -> None:
         self.stb = 0
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLTage (.*)")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage <value>")
     def _set_voltage(self, channel: int, value: float) -> None:
         self._voltage[channel] = value
 
-    @scpi(r":INSTRument:CHANNEL(.*):VOLTage\?")
+    @scpi(":INSTRument:CHANNEL<channel>:VOLTage?")
     def _get_voltage(self, channel: int) -> float:
         return self._run_measurement(channel)
 
@@ -141,7 +141,7 @@ class Mocker5(BaseMocker):
         self.set_service_request_event()
         return self._voltage[channel]
 
-    @scpi(r":INSTRument:CHANNEL(.*):MEASure")
+    @scpi(":INSTRument:CHANNEL<channel>:MEASure")
     def _start_voltage_meas(self, channel: int) -> None:
         if self.stb & 0x40:
             # Don't start another measurement until the previous one is cleared.
@@ -152,7 +152,7 @@ class Mocker5(BaseMocker):
             daemon=True,
             ).start()
 
-    @scpi(r":INSTRument:CHANNEL(.*):REAd\?")
+    @scpi(":INSTRument:CHANNEL<channel>:REAd?")
     def _read_voltage_meas(self, channel: int) -> float:
         return self._voltage[channel]
 
