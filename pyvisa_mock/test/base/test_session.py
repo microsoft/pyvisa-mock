@@ -1,4 +1,4 @@
-from visa_mock.base.session import Session
+from pyvisa_mock.base.session import Session
 
 
 def test_session():

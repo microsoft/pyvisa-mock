@@ -1,5 +1,5 @@
-from visa_mock.base.register import register_resources
-from visa_mock.test.mock_instruments import instruments
+from pyvisa_mock.base.register import register_resources
+from pyvisa_mock.test.mock_instruments import instruments
 
 from pyvisa import ResourceManager
 

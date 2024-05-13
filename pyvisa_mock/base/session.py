@@ -10,7 +10,7 @@ from threading import RLock
 from datetime import timedelta
 
 from pyvisa import constants, attributes, rname
-from visa_mock.base.base_mocker import BaseMocker, StbRegister
+from pyvisa_mock.base.base_mocker import BaseMocker, StbRegister
 
 
 logger = logging.getLogger()

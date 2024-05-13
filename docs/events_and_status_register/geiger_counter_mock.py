@@ -5,7 +5,7 @@ import sched
 import time
 from random import gauss
 
-from visa_mock.base.base_mocker import BaseMocker, scpi
+from pyvisa_mock.base.base_mocker import BaseMocker, scpi
 
 
 class MessageCode(Enum):

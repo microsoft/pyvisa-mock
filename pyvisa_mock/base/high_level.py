@@ -16,8 +16,8 @@ from pyvisa.resources import SerialInstrument
 from pyvisa.rname import register_subclass, ResourceName
 from pyvisa.typing import VISASession
 
-from visa_mock.base.register import resources
-from visa_mock.base.session import (
+from pyvisa_mock.base.register import resources
+from pyvisa_mock.base.session import (
         Session,
         EventNotEnabledError,
         EventNotDisabledError,

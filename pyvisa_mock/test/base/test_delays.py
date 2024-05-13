@@ -1,7 +1,7 @@
 import pytest
 import time
-from visa_mock.base.base_mocker import BaseMocker
-from visa_mock.test.mock_instruments.instruments import Mocker1
+from pyvisa_mock.base.base_mocker import BaseMocker
+from pyvisa_mock.test.mock_instruments.instruments import Mocker1
 
 
 def time_command(mocker: BaseMocker, command: str) -> float:

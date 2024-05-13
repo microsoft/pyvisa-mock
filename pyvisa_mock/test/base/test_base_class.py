@@ -1,5 +1,5 @@
 import pytest
-from visa_mock.test.mock_instruments.instruments import Mocker0, Mocker1, Mocker2, Mocker3, Mocker4
+from pyvisa_mock.test.mock_instruments.instruments import Mocker0, Mocker1, Mocker2, Mocker3, Mocker4
 
 
 def test_base_long_and_short_form_match():
