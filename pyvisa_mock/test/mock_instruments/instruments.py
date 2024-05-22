@@ -4,7 +4,7 @@ import time
 from threading import Thread
 from enum import Enum, auto
 
-from visa_mock.base.base_mocker import BaseMocker, scpi, scpi_raw_regex
+from pyvisa_mock.base.base_mocker import BaseMocker, scpi, scpi_raw_regex
 
 
 class Mocker0(BaseMocker):

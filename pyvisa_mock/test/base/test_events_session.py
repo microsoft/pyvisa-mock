@@ -2,16 +2,16 @@ import pytest
 import logging
 from unittest.mock import MagicMock
 from datetime import timedelta
-from visa_mock.base.session import (
+from pyvisa_mock.base.session import (
     Session,
     EventNotEnabledError,
     EventNotDisabledError,
     EventNotSupportedError,
     EventTimeoutError,
     )
-from visa_mock.base.high_level import MockResource
-from visa_mock.test.mock_instruments import instruments
-from visa_mock.test.mock_instruments.instruments import Mocker5
+from pyvisa_mock.base.high_level import MockResource
+from pyvisa_mock.test.mock_instruments import instruments
+from pyvisa_mock.test.mock_instruments.instruments import Mocker5
 
 from pyvisa import ResourceManager
 from pyvisa.errors import VisaIOError

@@ -1,9 +1,9 @@
 import pytest
 import time
-from visa_mock.base.register import register_resources
-from visa_mock.base.high_level import MockResource
-from visa_mock.test.mock_instruments import instruments
-from visa_mock.test.mock_instruments.instruments import Mocker5
+from pyvisa_mock.base.register import register_resources
+from pyvisa_mock.base.high_level import MockResource
+from pyvisa_mock.test.mock_instruments import instruments
+from pyvisa_mock.test.mock_instruments.instruments import Mocker5
 
 from pyvisa import ResourceManager
 from pyvisa.errors import VisaIOError

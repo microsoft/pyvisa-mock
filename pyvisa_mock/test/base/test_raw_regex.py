@@ -1,10 +1,10 @@
 import pytest
-from visa_mock.test.mock_instruments.instruments import (
+from pyvisa_mock.test.mock_instruments.instruments import (
     Mocker6,
     MockerResponse,
     MockerChannel,
     )
-from visa_mock.base.base_mocker import MockingError, scpi_raw_regex, BaseMocker
+from pyvisa_mock.base.base_mocker import MockingError, scpi_raw_regex, BaseMocker
 
 
 def test_raw_regex_overlap():

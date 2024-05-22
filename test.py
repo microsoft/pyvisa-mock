@@ -1,10 +1,3 @@
-# pyvisa-mock
-
-pyvisa-mock aims to provide similar functionality as [pyvisa-sim](https://pyvisa-sim.readthedocs.io/en/latest/), however, instead of a static YAML file providing query/response items, a dynamic python object is responsible for handling queries. 
-
-## Example
-
-```python
 from collections import defaultdict
 from pyvisa import ResourceManager
 from pyvisa_mock.base.base_mocker import BaseMocker, scpi
@@ -64,4 +57,3 @@ reply = res.query(
     ":instrument:channel1:voltage?"
 )  # We can either use the short form or the long form
 print(reply)
-```

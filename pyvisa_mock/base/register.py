@@ -1,6 +1,6 @@
 from typing import Dict
 
-from visa_mock.base.base_mocker import BaseMocker
+from pyvisa_mock.base.base_mocker import BaseMocker
 
 resources: Dict[str, BaseMocker] = {}
 
