@@ -203,6 +203,19 @@ class Mocker6(BaseMocker):
         return MockerResponse.NOT_OKAY_BOARDER.value
 
 
+class Mocker7(BaseMocker):
+    """
+    A mocker class that returns binary data.
+
+    Based on Agilent
+    """
+    FETCH_DATA = b"1.0,2.0,3.0"
+
+    @scpi("FETCh?")
+    def fetch(self) -> bytes:
+        return self.FETCH_DATA
+
+
 resources = {
     "MOCK0::mock1::INSTR": Mocker1(),
     "MOCK0::mock2::INSTR": Mocker2(),
@@ -210,4 +223,5 @@ resources = {
     "MOCK0::mock4::INSTR": Mocker4(),
     "MOCK0::mock5::INSTR": Mocker5(),
     "MOCK0::mock6::INSTR": Mocker6(),
+    "MOCK0::mock7::INSTR": Mocker7(),
 }
