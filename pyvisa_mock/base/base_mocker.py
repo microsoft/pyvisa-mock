@@ -321,7 +321,13 @@ class BaseMocker(metaclass=MockerMetaClass):
         else:
             time.sleep(self._call_delay)
 
-        return str(handler(self, *args, **kwargs))
+        resp = handler(self, *args, **kwargs)
+        if isinstance(resp, (bytes, bytearray)):
+            # Return binary data as-is
+            return resp
+        else:
+            # Cast to string for all others
+            return str(resp)
 
     """
     Event Support:

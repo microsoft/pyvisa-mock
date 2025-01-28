@@ -154,8 +154,15 @@ class Session:
         if reply is not None:
             self._read_buffer = reply
 
-    def read(self) -> str:
-        return self._read_buffer
+    def read(self, count: int = None) -> str:
+        if count is None:
+            # Return everything
+            return self._read_buffer
+        else:
+            assert count >= 0
+            return_buffer = self._read_buffer[:count]
+            self._read_buffer = self._read_buffer[count:]
+            return return_buffer
 
     def ask(self, message: str):
         self.write(message)
